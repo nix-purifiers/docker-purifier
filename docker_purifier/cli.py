@@ -107,7 +107,10 @@ def native(args,root,dockerfile,sidecar,explicit_lock=False,explicit_dockerfile=
  selected=parsed['builder'] or os.environ.get('BUILDX_BUILDER')
  if not selected and parsed['dockerCommand']:
   selected=run([DOCKER,*global_args,'context','show'],stdout=subprocess.PIPE,text=True).stdout.strip()
- driver=run([DOCKER,*global_args,'buildx','inspect',*([selected] if selected else []),'--format','{{.Driver}}'],stdout=subprocess.PIPE,text=True).stdout.strip()
+ inspection=run([DOCKER,*global_args,'buildx','inspect',*([selected] if selected else [])],stdout=subprocess.PIPE,text=True).stdout
+ drivers=[line.partition(':')[2].strip() for line in inspection.splitlines() if line.startswith('Driver:')]
+ if len(drivers)!=1:raise ValueError('cannot determine the selected Buildx driver')
+ driver=drivers[0]
  extra=['--pull=false']
  for ref,image in data['images'].items():
   layout=dependencies/lock.alias(ref)/lock.PLATFORMS[platform]
