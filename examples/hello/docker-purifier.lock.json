@@ -1,0 +1,30 @@
+{
+  "contentHash": "f0609f92e8d200c1cc7054b4bbe9e444e153b2c51f003a8b63031ef4ffea152d",
+  "dockerfile": "Dockerfile",
+  "images": {
+    "quay.io/prometheus/busybox:latest": {
+      "platforms": {
+        "linux/amd64": {
+          "config": "{\"architecture\":\"amd64\",\"author\":\"The Prometheus Authors \\u003cprometheus-developers@googlegroups.com\\u003e\",\"config\":{\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"],\"Cmd\":[\"sh\"]},\"created\":\"2026-10-21T07:56:37.580752131Z\",\"history\":[{\"created\":\"2026-05-13T02:21:49Z\",\"created_by\":\"BusyBox 1.38.0 (uclibc), Buildroot 2026.08, Debian 13\"},{\"created\":\"2026-10-21T07:56:37.580752131Z\",\"created_by\":\"MAINTAINER The Prometheus Authors \\u003cprometheus-developers@googlegroups.com\\u003e\",\"comment\":\"buildkit.dockerfile.v0\",\"empty_layer\":true},{\"created\":\"2026-10-21T07:56:37.580752131Z\",\"created_by\":\"COPY /rootfs / # buildkit\",\"comment\":\"buildkit.dockerfile.v0\"}],\"os\":\"linux\",\"rootfs\":{\"type\":\"layers\",\"diff_ids\":[\"sha256:aa34e3131bf0650960e1ec314a32f7295b019a881db18dda84d319e96c3d68df\",\"sha256:58edf90fd8b3580d1bdfb1819eb4baef9e6479a78a9fdf23bf53d634f8d0d866\"]}}",
+          "digest": "sha256:ea38411e568ddef8ddf8ee0765697b9d33182c0ff07e6a84a80180bd35fc4f22",
+          "manifest": "{\n   \"schemaVersion\": 2,\n   \"mediaType\": \"application/vnd.docker.distribution.manifest.v2+json\",\n   \"config\": {\n      \"mediaType\": \"application/vnd.docker.container.image.v1+json\",\n      \"size\": 889,\n      \"digest\": \"sha256:35a735315ff67dfc699d1b2becb6a586d630454f51bef4b537730c94b665b420\"\n   },\n   \"layers\": [\n      {\n         \"mediaType\": \"application/vnd.docker.image.rootfs.diff.tar.gzip\",\n         \"size\": 801028,\n         \"digest\": \"sha256:72dcf69f72aa50581ac2f9a0894b04ed1990fa6dab407e748b3e1b021aa13218\"\n      },\n      {\n         \"mediaType\": \"application/vnd.docker.image.rootfs.diff.tar.gzip\",\n         \"size\": 322118,\n         \"digest\": \"sha256:456bdf926fcd64c913de8c92d709d95f6ed6f393fa8c23c301b54ec856dc04f6\"\n      }\n   ]\n}"
+        },
+        "linux/arm64": {
+          "config": "{\"architecture\":\"arm64\",\"author\":\"The Prometheus Authors \\u003cprometheus-developers@googlegroups.com\\u003e\",\"config\":{\"Env\":[\"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin\"],\"Cmd\":[\"sh\"]},\"created\":\"2026-10-21T07:59:51.318460437Z\",\"history\":[{\"created\":\"2026-05-13T02:21:49Z\",\"created_by\":\"BusyBox 1.38.0 (uclibc), Buildroot 2026.08, Debian 13\"},{\"created\":\"2026-10-21T07:59:51.318460437Z\",\"created_by\":\"MAINTAINER The Prometheus Authors \\u003cprometheus-developers@googlegroups.com\\u003e\",\"comment\":\"buildkit.dockerfile.v0\",\"empty_layer\":true},{\"created\":\"2026-10-21T07:59:51.318460437Z\",\"created_by\":\"COPY /rootfs / # buildkit\",\"comment\":\"buildkit.dockerfile.v0\"}],\"os\":\"linux\",\"rootfs\":{\"type\":\"layers\",\"diff_ids\":[\"sha256:5fbe941fb28544335238132f631a6cc889ade26b665d8848ef5c5e1392f6b49d\",\"sha256:78c6ce09d76b75b98faa07c6f65d716764382f8992f60ebddc7fea70f6f9f8b8\"]}}",
+          "digest": "sha256:e3313dcd2a95e98dd17e35bc720196431af37cb28dc98fafe20da31cb4ce0c79",
+          "manifest": "{\n   \"schemaVersion\": 2,\n   \"mediaType\": \"application/vnd.docker.distribution.manifest.v2+json\",\n   \"config\": {\n      \"mediaType\": \"application/vnd.docker.container.image.v1+json\",\n      \"size\": 889,\n      \"digest\": \"sha256:23ef82929bdfbd5844ab1c22aa41aaf6381fbabf01e3872226a9b4eb83e2591b\"\n   },\n   \"layers\": [\n      {\n         \"mediaType\": \"application/vnd.docker.image.rootfs.diff.tar.gzip\",\n         \"size\": 862947,\n         \"digest\": \"sha256:edf6c6b1320f8b4afe16a69e49def9cc415ff67b1402095639834b56a38b2d84\"\n      },\n      {\n         \"mediaType\": \"application/vnd.docker.image.rootfs.diff.tar.gzip\",\n         \"size\": 322118,\n         \"digest\": \"sha256:3a02e730f39411055fdd80a2c8bcc23ecc720c2ac74395194b307b3ba18f8aec\"\n      }\n   ]\n}"
+        }
+      },
+      "sourceDigest": "sha256:7379672d53c28113469275f2eb48adffa19954f39f8ef20c1e2992278f658e6c"
+    }
+  },
+  "inputs": {
+    ".dockerignore": "7fdfd042fb5b8a65743885cdfb5316da52b0c91994045424a3cff7373ac71ea6",
+    "Dockerfile": "1bea9e4857d59f9b66443f5cc7729197bddf25ba7bd8eae12990c4de4dc6fdeb"
+  },
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "version": 1
+}
