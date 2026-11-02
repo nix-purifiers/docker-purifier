@@ -12,7 +12,7 @@ class Arguments(unittest.TestCase):
  def test_builder_selection(self):
   self.assertEqual(build(['buildx','--builder','local','build','.'])['prefix'],['buildx','--builder','local','build'])
  def test_forbidden(self):
-  self.assertEqual(build(['build','--network=host','.'])['forbidden'],['--network'])
+  self.assertEqual(build(['build','--network=host','.'])['forbidden'],[])
   self.assertEqual(build(['build','--pull=false','.'])['forbidden'],[])
  def test_file_alias_order(self):
   self.assertEqual(build(['build','--file','one','-ftwo','.'])['dockerfile'],Path('two').resolve())

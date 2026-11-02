@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: MIT
 """Native registry resolution, external release and ordinary Docker workflow."""
-import json,os,shutil,subprocess,sys,tempfile,time
+import functools,http.server,json,os,shutil,ssl,subprocess,sys,tempfile,threading,time
 from pathlib import Path
 from registry import Registry
 SOURCE=Path(__file__).resolve().parents[1]
@@ -14,7 +14,10 @@ with tempfile.TemporaryDirectory(prefix='docker-conformance-') as temporary:
  temp=Path(temporary);run(['nix','build',SOURCE,'--out-link',temp/'cli'])
  cli=temp/'cli/bin/docker-purifier';docker=temp/'cli/bin/docker'
  root=temp/'project';root.mkdir();sidecar=temp/'locks/docker.json' if case=='external' else root/'docker-purifier.lock.json'
- env={**os.environ,'SSL_CERT_FILE':str(SOURCE/'tests/tls/localhost.crt')}
+ bundle=temp/'registry-ca.pem'
+ roots=''.join(ssl.DER_cert_to_PEM_cert(cert) for cert in ssl.create_default_context().get_ca_certs(binary_form=True))
+ bundle.write_text(roots+(SOURCE/'tests/tls/localhost.crt').read_text())
+ env={**os.environ,'SSL_CERT_FILE':str(bundle),'NIX_SSL_CERT_FILE':str(bundle)}
  def purifier(command,*args):return run([cli,'--project',root,'--lockfile',sidecar,command,*args],env=env)
  if case in ('relock','update'):
   registry=Registry().start()
@@ -58,7 +61,17 @@ with tempfile.TemporaryDirectory(prefix='docker-conformance-') as temporary:
     run([docker,'build','.','--load','-t',tag],cwd=root)
     output=run([docker,'run','--rm','--network=none',tag],cwd=root,capture_output=True).stdout
     assert output=='hello from locked Docker dependencies\n',output
-   finally:run([docker,'image','rm','-f',tag],cwd=root)
+    served=temp/'served';served.mkdir();(served/'network.txt').write_text('host build network is available\n')
+    server=http.server.ThreadingHTTPServer(('0.0.0.0',0),functools.partial(http.server.SimpleHTTPRequestHandler,directory=served))
+    threading.Thread(target=server.serve_forever,daemon=True).start()
+    try:
+     with (root/'Dockerfile').open('a') as file:file.write('ARG PURIFIER_TEST_URL\nRUN wget -qO /network.txt "$PURIFIER_TEST_URL"\n')
+     purifier('lock');original=sidecar.read_bytes()
+     run([docker,'build','.','--load','-t',tag,'--add-host','host.docker.internal:host-gateway','--build-arg','PURIFIER_TEST_URL=http://host.docker.internal:'+str(server.server_port)+'/network.txt'],cwd=root)
+     output=run([docker,'run','--rm','--network=none','--entrypoint','cat',tag,'/network.txt'],cwd=root,capture_output=True).stdout
+     assert output=='host build network is available\n',output
+    finally:server.shutdown();server.server_close()
+   finally:subprocess.run([str(docker),'image','rm','-f',tag],cwd=root)
    assert sidecar.read_bytes()==original
  else:raise ValueError(case)
  sidecar.unlink()

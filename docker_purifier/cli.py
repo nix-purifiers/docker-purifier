@@ -5,6 +5,7 @@ from . import lock
 SKOPEO=os.environ.get('DOCKER_PURIFIER_SKOPEO','skopeo')
 DOCKER=os.environ.get('DOCKER_PURIFIER_DOCKER','docker')
 def run(args,**kwargs):return subprocess.run(list(map(str,args)),check=True,**kwargs)
+def run_unchecked(args,**kwargs):return subprocess.run(list(map(str,args)),check=False,**kwargs)
 def raw(reference,config=False):
  return run([SKOPEO,'inspect','--config' if config else '--raw','docker://'+reference],stdout=subprocess.PIPE).stdout
 def write(path,text):
@@ -71,7 +72,7 @@ def realize(root,dockerfile,sidecar,target):
 def prefetch(root,dockerfile,sidecar):
  data=checked(root,dockerfile,sidecar)
  cache=sidecar.parent/'.docker-purifier'/lock.alias(str(sidecar));cache.mkdir(parents=True,exist_ok=True)
- for target in ('dependencies','runtime'):
+ for target in ('dependencies','archives','runtime'):
   result=realize(root,dockerfile,sidecar,target)
   run(['nix-store','--add-root',cache/target,'--indirect','--realise',result],stdout=subprocess.DEVNULL)
  return data,cache/'dependencies'
@@ -95,17 +96,32 @@ def native(args,root,dockerfile,sidecar,explicit_lock=False,explicit_dockerfile=
   _,commands=arguments.command(args)
   if commands[:1]==['compose'] or (commands[:1]==['buildx'] and 'bake' in commands):raise ValueError('locked Compose/Bake builds are not supported; use docker build')
   os.execv(DOCKER,[DOCKER,*args])
- if parsed['forbidden']:raise ValueError('locked builds supply their own image contexts and network policy: '+', '.join(parsed['forbidden']))
+ if parsed['forbidden']:raise ValueError('locked builds supply their own image contexts and pull policy: '+', '.join(parsed['forbidden']))
  data=checked(root,dockerfile,sidecar)
  platform=parsed['platform'] or os.environ.get('DOCKER_DEFAULT_PLATFORM') or ('linux/arm64' if os.uname().machine in ('aarch64','arm64') else 'linux/amd64')
  if platform not in data['platforms']:raise ValueError('platform is absent from the lock'+lock.FIX)
  native_platform='linux/arm64' if os.uname().machine in ('aarch64','arm64') else 'linux/amd64'
  if platform!=native_platform:raise ValueError('cross-platform host builds are not supported yet')
  _,dependencies=prefetch(root,dockerfile,sidecar)
- extra=['--network=none','--pull=false']
+ global_args,_=arguments.command(args)
+ selected=parsed['builder'] or os.environ.get('BUILDX_BUILDER')
+ if not selected and parsed['dockerCommand']:
+  selected=run([DOCKER,*global_args,'context','show'],stdout=subprocess.PIPE,text=True).stdout.strip()
+ driver=run([DOCKER,*global_args,'buildx','inspect',*([selected] if selected else []),'--format','{{.Driver}}'],stdout=subprocess.PIPE,text=True).stdout.strip()
+ extra=['--pull=false']
  for ref,image in data['images'].items():
   layout=dependencies/lock.alias(ref)/lock.PLATFORMS[platform]
-  extra.extend(['--build-context',ref+'=oci-layout://'+str(layout)+'@'+image['platforms'][platform]['digest']])
+  if driver=='docker':
+   archives=dependencies.parent/'archives'
+   metadata=load(archives/(lock.alias(ref)+'.json'));tag=metadata['tag']
+   inspect=run_unchecked([DOCKER,*global_args,'image','inspect',tag,'--format','{{.Id}}'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
+   if inspect.returncode or inspect.stdout.strip()!=metadata['imageId']:
+    run([DOCKER,*global_args,'load','--input',archives/(lock.alias(ref)+'.tar')],stdout=sys.stderr)
+    identity=run([DOCKER,*global_args,'image','inspect',tag,'--format','{{.Id}}'],stdout=subprocess.PIPE,text=True).stdout.strip()
+    if identity!=metadata['imageId']:raise ValueError('Docker did not load the Nix-resolved image identity')
+   context='docker-image://'+tag
+  else:context='oci-layout://'+str(layout)+'@'+image['platforms'][platform]['digest']
+  extra.extend(['--build-context',ref+'='+context])
  os.execv(DOCKER,[DOCKER,*parsed['prefix'],*extra,*parsed['body']])
 
 def main():

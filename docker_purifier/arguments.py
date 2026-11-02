@@ -4,7 +4,7 @@ from pathlib import Path
 GLOBAL_VALUES={'--config','--context','-c','--host','-H','--log-level','-l','--tlscacert','--tlscert','--tlskey'}
 VALUES={'--add-host','--annotation','--attest','--build-arg','--builder','--cache-from','--cache-to','--call','--cgroup-parent','--file','-f','--iidfile','--label','--metadata-file','--network','--no-cache-filter','--output','-o','--platform','--secret','--shm-size','--ssh','--tag','-t','--target','--ulimit','--build-context','--allow','--progress','--policy'}
 BOOLS={'--check','--debug','-D','--disable-content-trust','--load','--no-cache','--pull','--push','--quiet','-q','--rm','--force-rm','--squash','--help','-h'}
-PROTECTED={'--network','--pull','--build-context','--allow'}
+PROTECTED={'--pull','--build-context'}
 def command(args):
  i=0
  while i<len(args) and args[i].startswith('-'):
@@ -13,13 +13,15 @@ def command(args):
   i+=1
  return args[:i],args[i:]
 def build(args):
- prefix,rest=command(args)
+ prefix,rest=command(args);plugin_builder=None
  if rest[:1]==['build']:body=rest[1:];prefix+=['build']
  elif rest[:1]==['buildx']:
   plugin=rest[1:];i=0
   while i<len(plugin) and plugin[i].startswith('-'):
    key=plugin[i].split('=',1)[0]
-   if key=='--builder' and '=' not in plugin[i]:i+=1
+   if key=='--builder':
+    if '=' in plugin[i]:plugin_builder=plugin[i].split('=',1)[1]
+    else:i+=1;plugin_builder=plugin[i] if i<len(plugin) else None
    i+=1
   if plugin[i:i+1]!=['build']:return None
   prefix+=['buildx',*plugin[:i],'build'];body=plugin[i+1:]
@@ -50,4 +52,4 @@ def build(args):
  if context=='-' or '://' in context or context.startswith('git@'):raise ValueError('locked builds require a checked-out local build context')
  root=Path(context).resolve()
  dockerfile=Path(values.get('--file',values.get('-f',''))).resolve() if '--file' in values or '-f' in values else root/'Dockerfile'
- return {'prefix':prefix,'body':body,'root':root,'dockerfile':dockerfile,'platform':values.get('--platform'),'forbidden':forbidden}
+ return {'prefix':prefix,'body':body,'root':root,'dockerfile':dockerfile,'platform':values.get('--platform'),'forbidden':forbidden,'builder':values.get('--builder',plugin_builder),'dockerCommand':rest[:1]==['build']}

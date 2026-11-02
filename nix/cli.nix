@@ -46,6 +46,7 @@ stdenvNoCC.mkDerivation {
      --set-default SSL_CERT_FILE ${cacert}/etc/ssl/certs/ca-bundle.crt \
      --prefix DOCKER_CLI_PLUGIN_DIRS : ${docker-buildx}/libexec/docker/cli-plugins
     makeWrapper "$out/bin/docker-purifier" "$out/bin/docker" --add-flags "native --"
+    ln -s ${dockerfile-language-server}/bin/docker-langserver "$out/bin/docker-langserver"
   '';
   meta = {
     description = "Locked Nix-resolved Docker base images";

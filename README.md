@@ -60,15 +60,20 @@ docker build -t my-app .
 
 Prefetch keeps the image layouts, Docker client, Buildx, resolver and editor
 worker alive through garbage-collector roots beside the selected lock.
-Build commands use local OCI contexts and `--network=none`. Vendor files
-needed by `RUN` commands into the build context; package-manager downloads
-inside `RUN` are not locked by this integration.
+Base images come from the local Nix cache. Commands inside `RUN` retain normal
+network access; downloads by tools such as uv are outside this image lock.
+For an offline build, vendor those inputs or supply a prepared package cache:
+
+```sh
+docker build --network=none -t my-app .
+```
 
 `lock` excludes `.docker-purifier` from the active Docker ignore file, so
 the generated cache does not enter images through `COPY .`.
 
-An existing Docker daemon and Buildx with OCI named-context support are
-required. The shell supplies compatible client and Buildx packages. Docker
+An existing Docker daemon and Buildx with named-context support are
+required. The default Docker driver loads verified Nix-built image archives;
+other drivers use local OCI contexts. The shell supplies compatible client and Buildx packages. Docker
 connection options and explicit builder selection remain native options.
 The wrapper supports native-platform, local-context `docker build` and
 `docker buildx build` commands. Other Docker commands run normally.
@@ -88,9 +93,9 @@ editor check resolves a `COPY --from` reference to its declared build stage.
   Linux AMD64 and ARM64 are recorded by default.
 - **Dependency metadata is damaged:** `lock` repairs it against a recoverable
   pinned digest; if the digest itself is lost, resolution may need the registry.
-- **A build asks for network access:** vendor those inputs before building.
-  Remote `ADD`, external syntax frontends, `ONBUILD` base triggers, dynamic
-  `FROM`, explicit `FROM --platform`, `RUN` mounts/network overrides/heredocs,
+- **A Nix sandbox build needs downloads:** vendor those inputs or supply a
+  prepared cache. Host builds retain normal network access. Remote `ADD`, external syntax frontends, `ONBUILD` base triggers, dynamic
+  `FROM`, explicit `FROM --platform`, `RUN` mounts/heredocs,
   foreign layers, and Compose/Bake builds are not yet supported.
 
 Stage aliases must differ from external image references. Cross-platform

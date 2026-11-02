@@ -21,6 +21,15 @@ let
 in
 if target == "dependencies" then
   pkgs.callPackage ./dependencies.nix { inherit purifier; } { lock = purifier.checkLock read; }
+else if target == "archives" then
+  let
+    checked = purifier.checkLock read;
+    dependencies = pkgs.callPackage ./dependencies.nix { inherit purifier; } { lock = checked; };
+  in
+  pkgs.callPackage ./archives.nix { } {
+    lock = checked;
+    inherit dependencies;
+  }
 else if target == "runtime" then
   pkgs.runCommand "docker-runtime" { } ''ln -s @runtime@ "$out"''
 else if target == "release" then

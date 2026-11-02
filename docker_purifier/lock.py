@@ -47,7 +47,7 @@ def references(text):
      if '$' in name:raise ValueError('COPY --from requires a literal reference'+FIX)
      refs.append(name)
    if command=='ADD' and re.search(r'(?:https?|git|ssh)://|git@',value):raise ValueError('remote ADD inputs must be vendored before locking'+FIX)
-  elif command=='RUN' and any(token in value for token in ('--mount=', '--network=', '<<')):raise ValueError('RUN mounts are not supported yet'+FIX)
+  elif command=='RUN' and any(token in value for token in ('--mount=', '<<')):raise ValueError('RUN mounts are not supported yet'+FIX)
  if set(ref.lower() for ref in refs)&set(stages):raise ValueError('stage aliases must differ from external image references'+FIX)
  if not stages:raise ValueError('Dockerfile needs a FROM instruction'+FIX)
  return sorted(set(refs))
