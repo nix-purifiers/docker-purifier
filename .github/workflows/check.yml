@@ -16,8 +16,25 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - run: nix flake check -L
-      - run: tests/conformance-rebuild.sh
+      - name: Enforce and record the pure build sandbox
+        run: |
+          mkdir -p pure-evidence
+          nix config show --option sandbox true --json > pure-evidence/nix-config.json
+          python3 -c 'import json; v=json.load(open("pure-evidence/nix-config.json"))["sandbox"]["value"]; assert v is True or v == "true", v'
+      - name: Pure Linux checks
+        run: |
+          set -o pipefail
+          nix flake check --option sandbox true -L 2>&1 | tee pure-evidence/check.log
+      - name: Independent pure rebuilds
+        run: |
+          set -o pipefail
+          tests/conformance-rebuild.sh 2>&1 | tee pure-evidence/rebuild.log
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-pure-${{ matrix.runner }}
+          path: pure-evidence
+          retention-days: 14
   conformance:
     name: conformance-${{ matrix.case }} (${{ matrix.runner }})
     strategy:
@@ -50,6 +67,8 @@ jobs:
     timeout-minutes: 90
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: cachix/install-nix-action@v31
       - uses: docker/setup-docker-action@e43656e248c0bd0647d3f5c195d116aacf6fcaf4 # v4
         if: runner.os == 'Linux' && matrix.engine == '29.9.3'
