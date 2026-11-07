@@ -45,6 +45,8 @@ def main():
         assert version['Server']['Os'] == 'linux', version
         if os.environ.get('EXPECTED_ENGINE_VERSION'):
             assert version['Server']['Version'] == os.environ['EXPECTED_ENGINE_VERSION'], version
+            if os.environ['EXPECTED_ENGINE_VERSION'] == '25.0.18':
+                assert version['Server']['GitCommit'] == 'eaa0057b5d603fbd1eb1867246c05ef2a0cf1ed9', version
         info = json.loads(run([native, 'info', '--format', '{{json .}}'], env=env, capture_output=True).stdout)
         expected = os.environ.get('EXPECTED_NIX_SYSTEM')
         system = run(['nix', 'eval', '--impure', '--raw', '--expr', 'builtins.currentSystem'], capture_output=True).stdout

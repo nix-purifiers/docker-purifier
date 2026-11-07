@@ -93,12 +93,15 @@ jobs:
         run: |
           mkdir -p runtime-evidence
           set -o pipefail
+          source_ref="git+file://$PWD?rev=$(git rev-parse HEAD)"
+          nix flake archive --json --no-update-lock-file "$source_ref" > runtime-evidence/source-archive.json
+          python3 -c 'import json,pathlib,sys; d=json.load(open(sys.argv[1])); check=lambda v: (pathlib.Path(v["path"]).is_dir() and all(check(i) for i in v.get("inputs",{}).values())); assert check(d), d' runtime-evidence/source-archive.json
           socket="${DOCKER_HOST:-unix:///var/run/docker.sock}"
           # This explicit CI-only host integration uses the disposable runner's
           # local store as root, so it needs no Docker socket permission changes.
           sudo env "PATH=$PATH" nix build --store local --option build-users-group "" \
             --impure --option sandbox relaxed --file tests/runtime-check.nix \
-            --argstr source "$PWD" --argstr dockerHost "$socket" \
+            --argstr source "$source_ref" --argstr dockerHost "$socket" \
             --argstr expectedSystem "$EXPECTED_NIX_SYSTEM" \
             --argstr expectedEngine "$EXPECTED_ENGINE_VERSION" \
             --argstr runtimeId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
