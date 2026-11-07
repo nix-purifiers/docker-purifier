@@ -52,9 +52,14 @@ def main():
         system = run(['nix', 'eval', '--impure', '--raw', '--expr', 'builtins.currentSystem'], capture_output=True).stdout
         if expected:
             assert system == expected, (system, expected)
+        nix_config = json.loads(run(['nix', 'config', 'show', '--json'], capture_output=True).stdout)
+        sandbox = nix_config['sandbox']['value']
+        assert sandbox is True or sandbox == 'true', sandbox
         result = {'revision': os.environ['DOCKER_PURIFIER_TEST_REVISION'],
                   'kind': 'impure-external-daemon-host-integration',
                   'runtimeId': os.environ['DOCKER_PURIFIER_TEST_RUNTIME_ID'],
+                  'nestedNixRemote': os.environ.get('NIX_REMOTE', 'auto'),
+                  'nestedNixSandboxRequested': sandbox,
                   'dockerHost': env['DOCKER_HOST'],
                   'daemon': {key: info[key] for key in ('ID', 'ServerVersion', 'OSType', 'Architecture', 'KernelVersion', 'OperatingSystem', 'Driver', 'Name')},
                   'nixSystem': system, 'host': platform.platform(), 'docker': version,
@@ -148,7 +153,7 @@ def main():
                 assert failed.returncode != 0 and 'contentHash mismatch' in failed.stderr, failed
                 lock.write_bytes(locked)
                 if sys.platform == 'linux':
-                    image = run(['nix', 'build', '--impure', '--file', cli_root / 'lib/docker-purifier/nix/realize.nix',
+                    image = run(['nix', 'build', '--option', 'sandbox', 'true', '--impure', '--file', cli_root / 'lib/docker-purifier/nix/realize.nix',
                                  '--argstr', 'project', root, '--argstr', 'dockerfile', root / 'Dockerfile',
                                  '--argstr', 'lockFile', lock, '--argstr', 'target', 'release',
                                  '--no-link', '--print-out-paths'], capture_output=True).stdout.strip()
