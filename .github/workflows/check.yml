@@ -47,7 +47,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
-      - run: python3 tests/host-conformance.py "${{ matrix.case }}"
+      - run: nix shell --inputs-from . --no-update-lock-file nixpkgs#openssl -c python3 tests/host-conformance.py "${{ matrix.case }}"
 
   host-runtime:
     name: host-runtime (${{ matrix.runner }}, ${{ matrix.engine || 'colima' }})
