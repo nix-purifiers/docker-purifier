@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 """A real TLS OCI registry serving two versions of tiny empty Linux images."""
 import hashlib,http.server,json,ssl,threading
-from pathlib import Path
+from tls_fixture import FixtureTLS
 INDEX='application/vnd.oci.image.index.v1+json';MANIFEST='application/vnd.oci.image.manifest.v1+json';CONFIG='application/vnd.oci.image.config.v1+json'
 def encode(value):return json.dumps(value,sort_keys=True,separators=(',',':')).encode()
 def digest(payload):return 'sha256:'+hashlib.sha256(payload).hexdigest()
@@ -29,10 +29,12 @@ class Registry:
     self.send_response(200);self.send_header('Content-Type',kind);self.send_header('Content-Length',str(len(payload)));self.send_header('Docker-Distribution-Api-Version','registry/2.0');self.send_header('Docker-Content-Digest',digest(payload));self.end_headers();self.wfile.write(payload)
    def log_message(self,*args):pass
   self.server=http.server.ThreadingHTTPServer(('127.0.0.1',0),Handler)
-  context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);base=Path(__file__).parent/'tls';context.load_cert_chain(base/'localhost.crt',base/'localhost.key');self.server.socket=context.wrap_socket(self.server.socket,server_side=True)
+  self.tls=FixtureTLS()
+  context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER);context.load_cert_chain(self.tls.certificate,self.tls.key);self.server.socket=context.wrap_socket(self.server.socket,server_side=True)
   self.host='localhost:'+str(self.server.server_port)
  def put(self,payload,kind):
   key=digest(payload);self.objects[key]=(payload,kind)
   return {'digest':key,'size':len(payload),'mediaType':kind}
  def start(self):threading.Thread(target=self.server.serve_forever,daemon=True).start();return self
- def stop(self):self.server.shutdown();self.server.server_close()
+ def stop(self):
+  self.server.shutdown();self.server.server_close();self.tls.close()

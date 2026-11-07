@@ -85,7 +85,10 @@ def main():
         (registry_root / 'Dockerfile').write_text(f'FROM {reference}\nCOPY hello /hello\nCMD ["/hello"]\n')
         bundle = temp / 'registry-ca.pem'
         bundle.write_text(''.join(ssl.DER_cert_to_PEM_cert(cert) for cert in ssl.create_default_context().get_ca_certs(binary_form=True))
-                          + (SOURCE / 'tests/tls/localhost.crt').read_text())
+                          + registry.tls.ca.read_text())
+        shutil.copyfile(registry.tls.ca, receipt / 'fixture-ca.crt')
+        shutil.copyfile(registry.tls.certificate, receipt / 'fixture-localhost.crt')
+        result['fixtureOpenSsl'] = registry.tls.version
         registry_env = {**env, 'SSL_CERT_FILE': str(bundle), 'NIX_SSL_CERT_FILE': str(bundle)}
         try:
             run([cli, '--project', registry_root, 'lock'], env=registry_env)

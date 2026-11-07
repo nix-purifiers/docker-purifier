@@ -48,13 +48,21 @@ in
   platforms =
     assert import ./platforms.nix { inherit (pkgs) lib; };
     pkgs.runCommand "docker-host-platforms" { } "touch $out";
-  unit = pkgs.runCommand "docker-unit" { nativeBuildInputs = [ pkgs.python3 ]; } ''
-    cp -r ${self} source
-    chmod -R u+w source
-    cd source
-    python -m unittest discover -s tests -v
-    touch "$out"
-  '';
+  unit =
+    pkgs.runCommand "docker-unit"
+      {
+        nativeBuildInputs = [
+          pkgs.python3
+          pkgs.openssl
+        ];
+      }
+      ''
+        cp -r ${self} source
+        chmod -R u+w source
+        cd source
+        python -m unittest discover -s tests -v
+        touch "$out"
+      '';
   editor =
     pkgs.runCommand "docker-editor"
       {

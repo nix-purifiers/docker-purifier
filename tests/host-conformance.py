@@ -16,11 +16,12 @@ with tempfile.TemporaryDirectory(prefix='docker-conformance-') as temporary:
  root=temp/'project';root.mkdir();sidecar=temp/'locks/docker.json' if case=='external' else root/'docker-purifier.lock.json'
  bundle=temp/'registry-ca.pem'
  roots=''.join(ssl.DER_cert_to_PEM_cert(cert) for cert in ssl.create_default_context().get_ca_certs(binary_form=True))
- bundle.write_text(roots+(SOURCE/'tests/tls/localhost.crt').read_text())
+ bundle.write_text(roots)
  env={**os.environ,'SSL_CERT_FILE':str(bundle),'NIX_SSL_CERT_FILE':str(bundle)}
  def purifier(command,*args):return run([cli,'--project',root,'--lockfile',sidecar,command,*args],env=env)
  if case in ('relock','update'):
   registry=Registry().start()
+  bundle.write_text(roots+registry.tls.ca.read_text())
   first=registry.host+'/first:latest';second=registry.host+'/second:latest'
   (root/'Dockerfile').write_text(f'FROM {first} AS builder\nCOPY version.txt /version.txt\nFROM {second}\nCOPY --from=builder /version.txt /version.txt\n')
   (root/'version.txt').write_text('local source\n')
