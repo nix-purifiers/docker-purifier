@@ -23,6 +23,8 @@ class FixtureTLS:
                                   text=True, timeout=60).stdout
         try:
             self.version = run('version').strip()
+            if not self.version.startswith('OpenSSL '):
+                raise RuntimeError('TLS fixture requires the pinned OpenSSL SDK; LibreSSL is unsupported')
             run('req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-sha256',
                 '-keyout', self.root / 'ca.key', '-out', self.ca, '-days', '2',
                 '-subj', '/CN=docker-purifier fixture CA',
