@@ -52,10 +52,32 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
       - uses: docker/setup-docker-action@e43656e248c0bd0647d3f5c195d116aacf6fcaf4 # v4
-        if: runner.os == 'Linux'
+        if: runner.os == 'Linux' && matrix.engine == '29.9.3'
         with:
           version: v${{ matrix.engine }}
           set-host: true
+      - name: Start the maintained 25.x daemon from its Nix derivation
+        if: runner.os == 'Linux' && matrix.engine == '25.0.18'
+        run: |
+          nix build .#test-engine25 --out-link engine25 -L
+          mkdir -p runtime-evidence
+          nix derivation show "$(readlink engine25)" > runtime-evidence/engine25-derivation.json
+          nix hash path "$(readlink engine25)" > runtime-evidence/engine25-nar-hash.txt
+          socket="$RUNNER_TEMP/docker25.sock"
+          # The log redirection intentionally runs as the runner, not root.
+          # shellcheck disable=SC2024
+          sudo engine25/bin/dockerd --host "unix://$socket" \
+            --data-root "$RUNNER_TEMP/docker25-data" \
+            --exec-root "$RUNNER_TEMP/docker25-exec" \
+            --pidfile "$RUNNER_TEMP/docker25.pid" \
+            --bridge=none --iptables=false > "$RUNNER_TEMP/docker25.log" 2>&1 &
+          echo "DOCKER_HOST=unix://$socket" >> "$GITHUB_ENV"
+          for _attempt in $(seq 1 60); do
+            if sudo test -S "$socket"; then exit 0; fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/docker25.log"
+          exit 1
       - name: Start Linux engine for the Darwin host client
         if: runner.os == 'macOS'
         run: |
@@ -92,6 +114,12 @@ jobs:
           name: docker-runtime-${{ matrix.system }}-${{ matrix.engine || 'colima' }}
           path: runtime-evidence
           retention-days: 14
+      - name: Stop the isolated 25.x daemon
+        if: always() && matrix.engine == '25.0.18'
+        run: |
+          if [ -f "$RUNNER_TEMP/docker25.pid" ]; then
+            sudo kill "$(cat "$RUNNER_TEMP/docker25.pid")"
+          fi
       - name: Stop Colima
         if: always() && runner.os == 'macOS'
         run: colima delete --force
