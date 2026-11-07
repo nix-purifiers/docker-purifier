@@ -41,10 +41,16 @@
     {
       overlays.default = overlay;
       lib.docker-purifier.readLock = import ./nix/read-lock.nix { lib = nixpkgs.lib; };
-      packages = forAll (system: {
-        default = (pkgsFor system).docker-purifier.cli;
-        cli = self.packages.${system}.default;
-      });
+      packages = forAll (
+        system:
+        {
+          default = (pkgsFor system).docker-purifier.cli;
+          cli = self.packages.${system}.default;
+        }
+        // nixpkgs.lib.optionalAttrs (nixpkgs.lib.hasSuffix "-linux" system) {
+          test-engine25 = import ./tests/engine25.nix { pkgs = pkgsFor system; };
+        }
+      );
       apps = forAll (system: {
         default = {
           type = "app";
