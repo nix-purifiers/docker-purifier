@@ -55,11 +55,15 @@ def main():
         nix_config = json.loads(run(['nix', 'config', 'show', '--json'], capture_output=True).stdout)
         sandbox = nix_config['sandbox']['value']
         assert sandbox is True or sandbox == 'true', sandbox
+        nested_store = json.loads(run(['nix', 'store', 'info', '--json'], capture_output=True).stdout)
+        if sys.platform == 'darwin':
+            assert nested_store['url'] == 'daemon' and nested_store['trusted'] is True, nested_store
         result = {'revision': os.environ['DOCKER_PURIFIER_TEST_REVISION'],
                   'kind': 'impure-external-daemon-host-integration',
                   'runtimeId': os.environ['DOCKER_PURIFIER_TEST_RUNTIME_ID'],
                   'nestedNixRemote': os.environ.get('NIX_REMOTE', 'auto'),
                   'nestedNixSandboxRequested': sandbox,
+                  'nestedNixStore': nested_store,
                   'dockerHost': env['DOCKER_HOST'],
                   'daemon': {key: info[key] for key in ('ID', 'ServerVersion', 'OSType', 'Architecture', 'KernelVersion', 'OperatingSystem', 'Driver', 'Name')},
                   'nixSystem': system, 'host': platform.platform(), 'docker': version,
