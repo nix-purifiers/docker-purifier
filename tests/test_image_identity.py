@@ -51,6 +51,20 @@ class ImageIdentity(unittest.TestCase):
             self.assertTrue(cli.image_matches([], self.tag, 'sha256:config'))
             self.assertEqual(command.call_count, 1)
 
+    def test_save_timeout_rejects_and_cleans_workspace(self):
+        saved_path = None
+        def command(args, **kwargs):
+            nonlocal saved_path
+            if 'inspect' in args:
+                return subprocess.CompletedProcess(args, 0, stdout='sha256:manifest')
+            self.assertEqual(kwargs['timeout'], 300)
+            saved_path = Path(args[args.index('--output') + 1])
+            saved_path.write_bytes(b'partial')
+            raise subprocess.TimeoutExpired(args, 300)
+        with patch.object(cli, 'run_unchecked', side_effect=command):
+            self.assertFalse(cli.image_matches([], self.tag, 'sha256:config'))
+        self.assertFalse(saved_path.parent.exists())
+
     def test_missing_image_is_not_verified(self):
         with patch.object(cli, 'run_unchecked', return_value=subprocess.CompletedProcess([], 1)):
             self.assertFalse(cli.image_matches([], self.tag, 'sha256:config'))
@@ -91,6 +105,10 @@ class ArchiveMemberSafety(unittest.TestCase):
     def test_missing_config(self):
         with self.assertRaises(ValueError):
             self.identity([{'RepoTags': ['expected:tag']}])
+
+    def test_missing_config_member(self):
+        with self.assertRaises(ValueError):
+            self.identity([{'Config': 'absent.json', 'RepoTags': ['expected:tag']}])
 
     def test_unsafe_config_paths(self):
         for name in ('../secret', '/etc/passwd', 'blobs/../secret', './config.json'):
