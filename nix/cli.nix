@@ -20,6 +20,10 @@ stdenvNoCC.mkDerivation {
   src = ../.;
   nativeBuildInputs = [ makeWrapper ];
   dontBuild = true;
+  passthru = {
+    nativeDocker = docker-client;
+    nativeSkopeo = skopeo;
+  };
   installPhase = ''
     mkdir -p "$out/bin" "$out/lib/docker-purifier"
     cp -r docker_purifier nix tests "$out/lib/docker-purifier/"
@@ -51,7 +55,7 @@ stdenvNoCC.mkDerivation {
   meta = {
     description = "Locked Nix-resolved Docker base images";
     license = lib.licenses.mit;
-    platforms = lib.platforms.linux;
+    platforms = lib.platforms.linux ++ [ "x86_64-darwin" ];
     mainProgram = "docker-purifier";
     homepage = "https://nix-purifiers.github.io/";
   };

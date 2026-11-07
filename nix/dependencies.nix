@@ -13,12 +13,16 @@
   lock,
   fetchers ? { },
 }:
+let
+  target = import ./host-platform.nix {
+    inherit lib;
+    system = stdenv.hostPlatform.system;
+  };
+in
 purifier.tree (
   {
     name = "docker-dependencies";
-    entries = lib.filter (
-      e: builtins.elem stdenv.hostPlatform.system e.systems
-    ) (purifier.checkLock lock).entries;
+    entries = lib.filter (e: builtins.elem target.system e.systems) (purifier.checkLock lock).entries;
     fetchurl = callPackage ./fetch-blob.nix { };
     inherit
       runCommand

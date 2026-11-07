@@ -1,0 +1,14 @@
+{
+  "contentHash": "d739ecaacdadae2a2d24c370171e68c33c6111ea76fc2bb71faee1f72db3eebd",
+  "dockerfile": "Dockerfile",
+  "images": {},
+  "inputs": {
+    ".dockerignore": "7fdfd042fb5b8a65743885cdfb5316da52b0c91994045424a3cff7373ac71ea6",
+    "Dockerfile": "561c4b6f4b650fdc792e0ed004cfedfe51019971aebce387b3e249697f9a4c98"
+  },
+  "platforms": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
+  "version": 1
+}

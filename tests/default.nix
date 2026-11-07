@@ -3,6 +3,17 @@
 let
   fixture = ../examples/hello;
   project = pkgs.docker-purifier.buildDockerProject { src = fixture; };
+  independent = pkgs.docker-purifier.buildDockerProject {
+    src = ./fixtures/hello-world + (if pkgs.stdenv.hostPlatform.isx86_64 then "/amd64" else "/arm64v8");
+    testCommand = ''
+      container=$(buildah --root /tmp/container-storage --runroot /tmp/container-run --storage-driver=vfs \
+        from --pull=never purifier-result)
+      output=$(buildah --root /tmp/container-storage --runroot /tmp/container-run --storage-driver=vfs \
+        run --isolation=chroot "$container" /hello)
+      printf '%s\n' "$output"
+      case "$output" in *"Hello from Docker!"*) ;; *) echo "$output"; exit 1;; esac
+    '';
+  };
   externalSource = builtins.path {
     path = fixture;
     name = "docker-external-source";
@@ -34,16 +45,9 @@ let
       '';
 in
 {
-  image = project.packages.image;
-  offline = project.tests;
-  release = project.release;
-  conformance-external =
-    pkgs.runCommand "docker-external-lock" { nativeBuildInputs = [ pkgs.diffutils ]; }
-      ''
-        test ! -e ${externalSource}/docker-purifier.lock.json
-        diff -r ${project.packages.image} ${external.packages.image}
-        touch "$out"
-      '';
+  platforms =
+    assert import ./platforms.nix { inherit (pkgs) lib; };
+    pkgs.runCommand "docker-host-platforms" { } "touch $out";
   unit = pkgs.runCommand "docker-unit" { nativeBuildInputs = [ pkgs.python3 ]; } ''
     cp -r ${self} source
     chmod -R u+w source
@@ -66,6 +70,19 @@ in
         chmod -R u+w project
         cd project
         python ${./editor.py}
+        touch "$out"
+      '';
+}
+// pkgs.lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+  independent-sample = independent.tests;
+  image = project.packages.image;
+  offline = project.tests;
+  release = project.release;
+  conformance-external =
+    pkgs.runCommand "docker-external-lock" { nativeBuildInputs = [ pkgs.diffutils ]; }
+      ''
+        test ! -e ${externalSource}/docker-purifier.lock.json
+        diff -r ${project.packages.image} ${external.packages.image}
         touch "$out"
       '';
 }

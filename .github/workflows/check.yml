@@ -31,3 +31,67 @@ jobs:
       - uses: actions/checkout@v4
       - uses: cachix/install-nix-action@v31
       - run: python3 tests/host-conformance.py "${{ matrix.case }}"
+
+  host-runtime:
+    name: host-runtime (${{ matrix.runner }}, ${{ matrix.engine || 'colima' }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            system: x86_64-linux
+            engine: 29.9.3
+          - runner: ubuntu-latest
+            system: x86_64-linux
+            engine: 25.0.18
+          - runner: macos-15-intel
+            system: x86_64-darwin
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: cachix/install-nix-action@v31
+      - uses: docker/setup-docker-action@e43656e248c0bd0647d3f5c195d116aacf6fcaf4 # v4
+        if: runner.os == 'Linux'
+        with:
+          version: v${{ matrix.engine }}
+          set-host: true
+      - name: Start Linux engine for the Darwin host client
+        if: runner.os == 'macOS'
+        run: |
+          brew install colima docker
+          colima start --runtime docker --vm-type vz --cpu 2 --memory 4
+          echo "DOCKER_HOST=unix://${HOME}/.colima/default/docker.sock" >> "$GITHUB_ENV"
+          colima version
+          colima status
+      - name: Native host and independent upstream runtime
+        env:
+          EXPECTED_NIX_SYSTEM: ${{ matrix.system }}
+          EXPECTED_ENGINE_VERSION: ${{ matrix.engine }}
+        run: |
+          mkdir -p runtime-evidence
+          set -o pipefail
+          socket="${DOCKER_HOST:-unix:///var/run/docker.sock}"
+          # This explicit CI-only host integration uses the disposable runner's
+          # local store as root, so it needs no Docker socket permission changes.
+          sudo env "PATH=$PATH" nix build --store local --option build-users-group "" \
+            --impure --option sandbox relaxed --file tests/runtime-check.nix \
+            --argstr source "$PWD" --argstr dockerHost "$socket" \
+            --argstr expectedSystem "$EXPECTED_NIX_SYSTEM" \
+            --argstr expectedEngine "$EXPECTED_ENGINE_VERSION" \
+            --argstr runtimeId "${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" \
+            --out-link runtime-evidence/result -L 2>&1 | tee runtime-evidence/runtime.log
+          output="$(readlink runtime-evidence/result)"
+          cp "$output/runtime.json" runtime-evidence/runtime.json
+          nix derivation show "$output" > runtime-evidence/derivation.json
+          nix-store --query --deriver "$output" > runtime-evidence/derivation-path.txt
+          nix hash path "$output" > runtime-evidence/output-nar-hash.txt
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: docker-runtime-${{ matrix.system }}-${{ matrix.engine || 'colima' }}
+          path: runtime-evidence
+          retention-days: 14
+      - name: Stop Colima
+        if: always() && runner.os == 'macOS'
+        run: colima delete --force
