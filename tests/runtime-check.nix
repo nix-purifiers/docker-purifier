@@ -42,6 +42,7 @@ pkgs.runCommand "docker-host-runtime-${runtimeId}"
     allowSubstitutes = false;
     nativeBuildInputs = [
       pkgs.python3
+      pkgs.openssl
       pkgs.nix
       pkgs.git
     ];
