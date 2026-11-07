@@ -150,9 +150,10 @@ def main():
                                  '--no-link', '--print-out-paths'], capture_output=True).stdout.strip()
                     archive = Path(image) / 'image.oci.tar.gz'
                     assert archive.is_file()
+                    native_archive = temp / (name + '-pure.tar')
                     run([skopeo, 'copy', 'oci-archive:' + str(archive),
-                         'docker-archive:' + str(temp / 'pure.tar') + ':' + tag], env=env)
-                    run([native, 'load', '--input', temp / 'pure.tar'], env=env)
+                         'docker-archive:' + str(native_archive) + ':' + tag], env=env)
+                    run([native, 'load', '--input', native_archive], env=env)
                     pure_output = run([native, 'run', '--rm', '--pull=never', '--network=none', tag],
                                       env=env, capture_output=True).stdout
                     assert pure_output == output, (pure_output, output)
