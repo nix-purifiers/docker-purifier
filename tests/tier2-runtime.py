@@ -89,6 +89,7 @@ def main():
         shutil.copyfile(registry.tls.ca, receipt / 'fixture-ca.crt')
         shutil.copyfile(registry.tls.certificate, receipt / 'fixture-localhost.crt')
         result['fixtureOpenSsl'] = registry.tls.version
+        registry.tls.trust_skopeo(home, registry.host)
         registry_env = {**env, 'SSL_CERT_FILE': str(bundle), 'NIX_SSL_CERT_FILE': str(bundle)}
         try:
             run([cli, '--project', registry_root, 'lock'], env=registry_env)
