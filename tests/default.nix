@@ -54,6 +54,7 @@ in
         nativeBuildInputs = [
           pkgs.python3
           pkgs.openssl
+          pkgs.skopeo
         ];
       }
       ''

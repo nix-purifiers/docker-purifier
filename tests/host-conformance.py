@@ -22,6 +22,9 @@ with tempfile.TemporaryDirectory(prefix='docker-conformance-') as temporary:
  if case in ('relock','update'):
   registry=Registry().start()
   bundle.write_text(roots+registry.tls.ca.read_text())
+  capture_home=temp/'capture-home';capture_home.mkdir()
+  registry.tls.trust_skopeo(capture_home,registry.host)
+  env={**env,'HOME':str(capture_home)}
   first=registry.host+'/first:latest';second=registry.host+'/second:latest'
   (root/'Dockerfile').write_text(f'FROM {first} AS builder\nCOPY version.txt /version.txt\nFROM {second}\nCOPY --from=builder /version.txt /version.txt\n')
   (root/'version.txt').write_text('local source\n')

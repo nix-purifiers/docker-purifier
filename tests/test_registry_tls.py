@@ -1,5 +1,8 @@
 # SPDX-License-Identifier: MIT
 import socket
+import json
+import os
+import tempfile
 import ssl
 import subprocess
 import unittest
@@ -37,6 +40,26 @@ class RegistryTLS(unittest.TestCase):
         with socket.create_connection(self.registry.server.server_address, timeout=10) as connection:
             with self.assertRaises(ssl.SSLCertVerificationError):
                 context.wrap_socket(connection, server_hostname='wrong.invalid')
+
+    def test_native_skopeo_ca_is_scoped_to_fixture_registry(self):
+        with tempfile.TemporaryDirectory(prefix='skopeo-fixture-home-') as home:
+            env = {key: value for key, value in os.environ.items()
+                   if key not in ('SSL_CERT_FILE', 'SSL_CERT_DIR', 'NIX_SSL_CERT_FILE')}
+            env['HOME'] = home
+            command = ['skopeo', 'inspect', '--raw', 'docker://' + self.registry.host + '/first:latest']
+            def inspect():
+                return subprocess.run(command, env=env, capture_output=True, text=True, timeout=30)
+            untrusted = inspect()
+            self.assertNotEqual(untrusted.returncode, 0, untrusted.stdout)
+            self.assertIn('certificate', untrusted.stderr)
+            self.registry.tls.trust_skopeo(home, 'other-registry.invalid:443')
+            wrong_registry = inspect()
+            self.assertNotEqual(wrong_registry.returncode, 0, wrong_registry.stdout)
+            self.assertIn('certificate', wrong_registry.stderr)
+            self.registry.tls.trust_skopeo(home, self.registry.host)
+            trusted = inspect()
+            self.assertEqual(trusted.returncode, 0, trusted.stderr)
+            self.assertEqual(json.loads(trusted.stdout)['schemaVersion'], 2)
 
     def test_leaf_profile_and_lifetime(self):
         certificate = self.registry.tls.certificate

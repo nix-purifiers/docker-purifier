@@ -7,6 +7,7 @@ OpenSSL comes from the pinned Nix test SDK; no system trust store is changed.
 """
 from pathlib import Path
 import subprocess
+import shutil
 import tempfile
 
 
@@ -44,6 +45,16 @@ class FixtureTLS:
         except BaseException:
             self.close()
             raise
+
+    def trust_skopeo(self, home, host):
+        # Native containers/image registry trust, scoped to this fixture HOME.
+        # https://github.com/containers/image/blob/main/docs/containers-certs.d.5.md
+        if not host or host in ('.', '..') or '/' in host or '\\' in host:
+            raise ValueError('invalid fixture registry host')
+        directory = Path(home) / '.config/containers/certs.d' / host
+        directory.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(self.ca, directory / 'ca.crt')
+        return directory
 
     def close(self):
         self.temporary.cleanup()
