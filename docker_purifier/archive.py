@@ -14,8 +14,10 @@ def regular_member(archive,name):
 def config_identity(archive,tag):
  with regular_member(archive,'manifest.json') as payload:manifest=json.load(payload)
  if not isinstance(manifest,list) or len(manifest)!=1 or not isinstance(manifest[0],dict) or manifest[0].get('RepoTags')!=[tag]:raise ValueError('native Docker archive has unexpected image tags')
+ digest=hashlib.sha256()
  with regular_member(archive,manifest[0].get('Config')) as configuration:
-  return 'sha256:'+hashlib.file_digest(configuration,'sha256').hexdigest()
+  for block in iter(lambda:configuration.read(1024*1024),b''):digest.update(block)
+ return 'sha256:'+digest.hexdigest()
 
 def main():
  source,destination,metadata,tag=sys.argv[1:]
