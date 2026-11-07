@@ -9,7 +9,11 @@
 }:
 { lock, dependencies }:
 let
-  platform = if stdenv.hostPlatform.system == "x86_64-linux" then "linux/amd64" else "linux/arm64";
+  target = import ./host-platform.nix {
+    inherit lib;
+    system = stdenv.hostPlatform.system;
+  };
+  platform = target.platform;
   alias = ref: builtins.substring 0 20 (builtins.hashString "sha256" ref);
   policy = writeText "docker-archive-policy.json" (
     builtins.toJSON {
@@ -33,7 +37,7 @@ runCommand "docker-native-archives"
         key = alias ref;
         manifest = builtins.fromJSON lock.images.${ref}.platforms.${platform}.manifest;
         tag = "localhost/nix-purifier-base:${lib.removePrefix "sha256:" manifest.config.digest}";
-        layout = "${dependencies}/${key}/${stdenv.hostPlatform.system}";
+        layout = "${dependencies}/${key}/${target.system}";
       in
       ''
         skopeo --tmpdir "$TMPDIR" --policy ${policy} copy oci:${layout}:purifier docker-archive:"$TMPDIR/${key}.tar":${tag}

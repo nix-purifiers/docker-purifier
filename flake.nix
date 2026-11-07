@@ -2,6 +2,7 @@
 {
   description = "Locked, Nix-resolved dependencies for Docker";
   inputs.nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+  inputs.nixpkgs-intel-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
   inputs.purifier = {
     url = "github:nix-purifiers/purifier";
     flake = false;
@@ -11,18 +12,20 @@
       self,
       nixpkgs,
       purifier,
+      nixpkgs-intel-darwin,
     }:
     let
       systems = [
         "x86_64-linux"
         "aarch64-linux"
+        "x86_64-darwin"
       ];
       forAll = nixpkgs.lib.genAttrs systems;
       shared = lib: import (purifier + "/nix/lib") { inherit lib; };
       overlay = final: prev: {
         docker-purifier = final.lib.makeScope final.newScope (scope: {
           cli = scope.callPackage ./nix/cli.nix {
-            nixpkgsSrc = nixpkgs;
+            nixpkgsSrc = final.path;
             purifierSrc = purifier;
           };
           buildDockerProject = scope.callPackage ./nix/build-project.nix { purifier = shared final.lib; };
@@ -30,7 +33,7 @@
       };
       pkgsFor =
         system:
-        import nixpkgs {
+        import (if system == "x86_64-darwin" then nixpkgs-intel-darwin else nixpkgs) {
           inherit system;
           overlays = [ overlay ];
         };
