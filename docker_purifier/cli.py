@@ -76,6 +76,22 @@ def prefetch(root,dockerfile,sidecar):
   result=realize(root,dockerfile,sidecar,target)
   run(['nix-store','--add-root',cache/target,'--indirect','--realise',result],stdout=subprocess.DEVNULL)
  return data,cache/'dependencies'
+def image_matches(global_args,tag,expected):
+ inspect=run_unchecked([DOCKER,*global_args,'image','inspect',tag,'--format','{{.Id}}'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
+ if inspect.returncode:return False
+ if inspect.stdout.strip()==expected:return True
+ # The containerd store reports the manifest/index digest as Id. Verify the
+ # saved raw configuration rather than assuming every store uses config Ids.
+ import tarfile
+ from .archive import config_identity
+ with tempfile.TemporaryDirectory(prefix='docker-purifier-identity-') as temporary:
+  archive=Path(temporary)/'image.tar'
+  try:
+   saved=run_unchecked([DOCKER,*global_args,'image','save','--output',archive,tag],stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,timeout=300)
+   if saved.returncode:return False
+   with tarfile.open(archive) as image:return config_identity(image,tag)==expected
+  except (OSError,ValueError,KeyError,TypeError,tarfile.TarError,subprocess.TimeoutExpired):return False
+
 def native(args,root,dockerfile,sidecar,explicit_lock=False,explicit_dockerfile=False):
  from . import arguments
  if '--help' in args or '-h' in args:
@@ -117,11 +133,9 @@ def native(args,root,dockerfile,sidecar,explicit_lock=False,explicit_dockerfile=
   if driver=='docker':
    archives=dependencies.parent/'archives'
    metadata=load(archives/(lock.alias(ref)+'.json'));tag=metadata['tag']
-   inspect=run_unchecked([DOCKER,*global_args,'image','inspect',tag,'--format','{{.Id}}'],stdout=subprocess.PIPE,stderr=subprocess.DEVNULL,text=True)
-   if inspect.returncode or inspect.stdout.strip()!=metadata['imageId']:
+   if not image_matches(global_args,tag,metadata['imageId']):
     run([DOCKER,*global_args,'load','--input',archives/(lock.alias(ref)+'.tar')],stdout=sys.stderr)
-    identity=run([DOCKER,*global_args,'image','inspect',tag,'--format','{{.Id}}'],stdout=subprocess.PIPE,text=True).stdout.strip()
-    if identity!=metadata['imageId']:raise ValueError('Docker did not load the Nix-resolved image identity')
+    if not image_matches(global_args,tag,metadata['imageId']):raise ValueError('Docker did not load the Nix-resolved image identity')
    context='docker-image://'+tag
   else:context='oci-layout://'+str(layout)+'@'+image['platforms'][platform]['digest']
   extra.extend(['--build-context',ref+'='+context])
