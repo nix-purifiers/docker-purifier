@@ -22,12 +22,12 @@ let
   verify =
     host: expected:
     let
-      target = import ../nix/host-platform.nix {
+      target = import ../pkgs/build-docker-project/host-platform.nix {
         inherit lib;
         system = host;
       };
       selected =
-        import ../nix/dependencies.nix
+        import ../pkgs/build-docker-project/dependencies.nix
           {
             inherit lib;
             stdenv.hostPlatform.system = host;

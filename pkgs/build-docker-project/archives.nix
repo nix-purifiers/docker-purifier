@@ -41,7 +41,7 @@ runCommand "docker-native-archives"
       in
       ''
         skopeo --tmpdir "$TMPDIR" --policy ${policy} copy oci:${layout}:purifier docker-archive:"$TMPDIR/${key}.tar":${tag}
-        python ${../docker_purifier/archive.py} "$TMPDIR/${key}.tar" "$out/${key}.tar" "$out/${key}.json" ${lib.escapeShellArg tag}
+        python ${../../docker_purifier/archive.py} "$TMPDIR/${key}.tar" "$out/${key}.tar" "$out/${key}.json" ${lib.escapeShellArg tag}
       ''
     ) (builtins.attrNames lock.images)}
   ''

@@ -157,7 +157,7 @@ def main():
                 assert failed.returncode != 0 and 'contentHash mismatch' in failed.stderr, failed
                 lock.write_bytes(locked)
                 if sys.platform == 'linux':
-                    image = run(['nix', 'build', '--option', 'sandbox', 'true', '--impure', '--file', cli_root / 'lib/docker-purifier/nix/realize.nix',
+                    image = run(['nix', 'build', '--option', 'sandbox', 'true', '--impure', '--file', cli_root / 'lib/docker-purifier/pkgs/build-docker-project/realize.nix',
                                  '--argstr', 'project', root, '--argstr', 'dockerfile', root / 'Dockerfile',
                                  '--argstr', 'lockFile', lock, '--argstr', 'target', 'release',
                                  '--no-link', '--print-out-paths'], capture_output=True).stdout.strip()

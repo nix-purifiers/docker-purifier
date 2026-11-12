@@ -24,11 +24,13 @@
       shared = lib: import (purifier + "/nix/lib") { inherit lib; };
       overlay = final: prev: {
         docker-purifier = final.lib.makeScope final.newScope (scope: {
-          cli = scope.callPackage ./nix/cli.nix {
+          cli = scope.callPackage ./pkgs/cli/default.nix {
             nixpkgsSrc = final.path;
             purifierSrc = purifier;
           };
-          buildDockerProject = scope.callPackage ./nix/build-project.nix { purifier = shared final.lib; };
+          buildDockerProject = scope.callPackage ./pkgs/build-docker-project/default.nix {
+            purifier = shared final.lib;
+          };
         });
       };
       pkgsFor =
@@ -40,7 +42,7 @@
     in
     {
       overlays.default = overlay;
-      lib.docker-purifier.readLock = import ./nix/read-lock.nix { lib = nixpkgs.lib; };
+      lib.docker-purifier = (nixpkgs.lib.extend (import ./lib-overlays/default)).docker-purifier;
       packages = forAll (
         system:
         {

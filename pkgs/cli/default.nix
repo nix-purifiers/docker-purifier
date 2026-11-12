@@ -17,7 +17,7 @@
 stdenvNoCC.mkDerivation {
   pname = "docker-purifier";
   version = "0.1.0";
-  src = ../.;
+  src = ../..;
   nativeBuildInputs = [ makeWrapper ];
   dontBuild = true;
   passthru = {
@@ -26,9 +26,9 @@ stdenvNoCC.mkDerivation {
   };
   installPhase = ''
     mkdir -p "$out/bin" "$out/lib/docker-purifier"
-    cp -r docker_purifier nix tests "$out/lib/docker-purifier/"
+    cp -r docker_purifier pkgs lib-overlays tests "$out/lib/docker-purifier/"
     install -m755 bin/docker-purifier "$out/bin/docker-purifier"
-    substituteInPlace "$out/lib/docker-purifier/nix/realize.nix" \
+    substituteInPlace "$out/lib/docker-purifier/pkgs/build-docker-project/realize.nix" \
      --replace-fail '@nixpkgs@' '${nixpkgsSrc}' \
      --replace-fail '@purifier@' '${purifierSrc}' \
      --replace-fail '@runtime@' "$out"
@@ -46,7 +46,7 @@ stdenvNoCC.mkDerivation {
      --prefix PYTHONPATH : "$out/lib/docker-purifier" \
      --set DOCKER_PURIFIER_DOCKER ${docker-client}/bin/docker \
      --set DOCKER_PURIFIER_SKOPEO ${skopeo}/bin/skopeo \
-     --set DOCKER_PURIFIER_REALIZE "$out/lib/docker-purifier/nix/realize.nix" \
+     --set DOCKER_PURIFIER_REALIZE "$out/lib/docker-purifier/pkgs/build-docker-project/realize.nix" \
      --set-default SSL_CERT_FILE ${cacert}/etc/ssl/certs/ca-bundle.crt \
      --prefix DOCKER_CLI_PLUGIN_DIRS : ${docker-buildx}/libexec/docker/cli-plugins
     makeWrapper "$out/bin/docker-purifier" "$out/bin/docker" --add-flags "native --"

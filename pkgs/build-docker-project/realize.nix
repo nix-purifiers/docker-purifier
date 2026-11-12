@@ -8,12 +8,12 @@
 let
   pkgs = import (builtins.toPath "@nixpkgs@") { };
   purifier = import (builtins.toPath "@purifier@/nix/lib") { inherit (pkgs) lib; };
-  read = (import ./read-lock.nix { inherit (pkgs) lib; }) {
+  read = (import ../../lib-overlays/default/read-lock.nix { inherit (pkgs) lib; }) {
     src = /. + project;
     lockFile = /. + lockFile;
     dockerfile = /. + dockerfile;
   };
-  result = pkgs.callPackage ./build-project.nix { inherit purifier; } {
+  result = pkgs.callPackage ./default.nix { inherit purifier; } {
     src = /. + project;
     lockFile = /. + lockFile;
     dockerfile = /. + dockerfile;
