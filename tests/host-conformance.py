@@ -46,7 +46,7 @@ with tempfile.TemporaryDirectory(prefix='docker-conformance-') as temporary:
    purifier('prefetch')
   finally:registry.stop()
   # The local registry is gone before the real packaged Nix builder runs.
-  run(['nix','build','--impure','--file',temp/'cli/lib/docker-purifier/nix/realize.nix','--argstr','project',root,'--argstr','dockerfile',root/'Dockerfile','--argstr','lockFile',sidecar,'--argstr','target','release','--out-link',temp/'release'])
+  run(['nix','build','--impure','--file',temp/'cli/lib/docker-purifier/pkgs/build-docker-project/realize.nix','--argstr','project',root,'--argstr','dockerfile',root/'Dockerfile','--argstr','lockFile',sidecar,'--argstr','target','release','--out-link',temp/'release'])
   import tarfile
   unpack=temp/'image';unpack.mkdir()
   with tarfile.open(temp/'release/image.oci.tar.gz') as archive:archive.extractall(unpack,filter='data')
@@ -57,7 +57,7 @@ with tempfile.TemporaryDirectory(prefix='docker-conformance-') as temporary:
   original=sidecar.read_bytes();purifier('lock');assert sidecar.read_bytes()==original;purifier('prefetch')
   if case=='external':
    assert not (root/'docker-purifier.lock.json').exists()
-   run(['nix','build','--impure','--file',temp/'cli/lib/docker-purifier/nix/realize.nix','--argstr','project',root,'--argstr','dockerfile',root/'Dockerfile','--argstr','lockFile',sidecar,'--argstr','target','release','--no-link'])
+   run(['nix','build','--impure','--file',temp/'cli/lib/docker-purifier/pkgs/build-docker-project/realize.nix','--argstr','project',root,'--argstr','dockerfile',root/'Dockerfile','--argstr','lockFile',sidecar,'--argstr','target','release','--no-link'])
   else:
    run([docker,'info'],cwd=root)
    tag='purifier-conformance:'+str(os.getpid())

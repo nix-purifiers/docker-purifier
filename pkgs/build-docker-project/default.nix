@@ -29,7 +29,9 @@
 }:
 let
   lock = purifier.checkLock (
-    (import ./read-lock.nix { inherit lib; }) { inherit src lockFile dockerfile; }
+    (import ../../lib-overlays/default/read-lock.nix { inherit lib; }) {
+      inherit src lockFile dockerfile;
+    }
   );
   dependencies = callPackage ./dependencies.nix { inherit purifier; } { inherit lock fetchers; };
   source = lib.cleanSourceWith {
@@ -55,7 +57,7 @@ let
           buildah
           python3
         ];
-        PYTHONPATH = ../.;
+        PYTHONPATH = ../..;
       }
       ''
                 mkdir -p /tmp/container-build /tmp/container-storage /tmp/container-run
@@ -79,7 +81,7 @@ let
     requiredSystemFeatures = [ ];
   });
   tests = runCommand "docker-project-tests" { nativeBuildInputs = [ python3 ]; } ''
-    python ${../tests/check-image.py} ${image}
+    python ${../../tests/check-image.py} ${image}
     touch "$out"
   '';
   release =
